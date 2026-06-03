@@ -70,8 +70,8 @@ func (c *Client) Connect() error {
 		SetClientID(c.cfg.ClientID).
 		SetAutoReconnect(true).
 		SetConnectRetry(true).
-		SetConnectRetryInterval(5 * time.Second).
-		SetKeepAlive(60 * time.Second).
+		SetConnectRetryInterval(5*time.Second).
+		SetKeepAlive(60*time.Second).
 		SetWill(BridgeAvailabilityTopic, Unavailable, 1, true)
 	if c.cfg.Username != "" {
 		opts.SetUsername(c.cfg.Username)
@@ -94,7 +94,7 @@ func (c *Client) Connect() error {
 
 // Publish sends one OutMessage.
 func (c *Client) Publish(m OutMessage) {
-	if c.client == nil {
+	if c == nil || c.client == nil {
 		return
 	}
 	c.client.Publish(m.Topic, 1, m.Retained, m.Payload)
@@ -102,6 +102,9 @@ func (c *Client) Publish(m OutMessage) {
 
 // Disconnect publishes offline and closes the connection.
 func (c *Client) Disconnect() {
+	if c == nil {
+		return
+	}
 	if c.client != nil {
 		c.client.Publish(BridgeAvailabilityTopic, 1, true, Unavailable).Wait()
 		c.client.Disconnect(250)

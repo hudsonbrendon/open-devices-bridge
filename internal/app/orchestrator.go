@@ -99,21 +99,25 @@ func (o *Orchestrator) handleMessage(providerID string, m protocol.Message) {
 		}
 	case "devices":
 		o.store.setDevices(providerID, m.Devices)
-		o.mu.Lock()
-		info := o.infos[providerID]
-		o.mu.Unlock()
-		for _, d := range m.Devices {
-			for _, msg := range hapublish.DiscoveryMessages(info, d) {
-				o.client.Publish(msg)
+		if o.client != nil {
+			o.mu.Lock()
+			info := o.infos[providerID]
+			o.mu.Unlock()
+			for _, d := range m.Devices {
+				for _, msg := range hapublish.DiscoveryMessages(info, d) {
+					o.client.Publish(msg)
+				}
 			}
 		}
 	case "state":
 		o.store.setValues(providerID, m.Device, m.Values)
 		// Use devicesFor to read under the store's own mutex (avoids mixing o.mu and store.mu).
 		devices := o.store.devicesFor(providerID)
-		for _, d := range devices {
-			if d.ID == m.Device {
-				o.client.Publish(hapublish.StateMessage(providerID, d, m.Values))
+		if o.client != nil {
+			for _, d := range devices {
+				if d.ID == m.Device {
+					o.client.Publish(hapublish.StateMessage(providerID, d, m.Values))
+				}
 			}
 		}
 	}
