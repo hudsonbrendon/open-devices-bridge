@@ -1,0 +1,8 @@
+{
+  "id": "camera-mac",
+  "name": "Camera (macOS)",
+  "exec": "camera-mac",
+  "args": [],
+  "platforms": ["darwin"],
+  "enabled": true
+}
