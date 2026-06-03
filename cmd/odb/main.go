@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"fyne.io/fyne/v2"
 	fyneapp "fyne.io/fyne/v2/app"
 
 	appcore "github.com/hudsonbrendon/open-devices-bridge/internal/app"
@@ -58,17 +59,17 @@ func main() {
 	}
 
 	if client != nil && err == nil {
-		client.OnStatus = func(hapublish.Status) { rebuild() }
+		client.OnStatus = func(hapublish.Status) { fyne.Do(rebuild) }
 		go client.Connect()
 	}
 
-	orch.OnUpdate = rebuild
+	orch.OnUpdate = func() { fyne.Do(rebuild) }
 	orch.Start(providerRoots())
 	rebuild()
 
 	go func() {
 		for range time.Tick(30 * time.Second) {
-			rebuild()
+			fyne.Do(rebuild)
 		}
 	}()
 
