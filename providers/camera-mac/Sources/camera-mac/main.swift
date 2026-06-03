@@ -50,22 +50,31 @@ if CommandLine.arguments.contains("--selftest") {
 
 let workQueue = DispatchQueue(label: "camera-mac.work")
 var cams: [Cam] = []
-var listening = Set<CMIOObjectID>()
+var listeners: [CMIOObjectID: CMIOObjectPropertyListenerBlock] = [:]
 var lastState: [String: Bool] = [:]
 
 func rescan() {
     cams = buildCams()
     emitDevices(cams)
-    for c in cams where !listening.contains(c.oid) {
-        listening.insert(c.oid)
-        let cam = c
-        addRunningListener(cam.oid, workQueue) {
-            workQueue.async {
-                let v = cmioIsRunning(cam.oid)
-                if lastState[cam.id] != v { lastState[cam.id] = v; emitState(cam) }
-            }
-        }
+    let present = Set(cams.map { $0.oid })
+
+    // Deregister listeners for cameras that disappeared.
+    for (oid, block) in listeners where !present.contains(oid) {
+        removeRunningListener(oid, workQueue, block)
+        listeners[oid] = nil
     }
+    // Register listeners for new cameras. The block runs on workQueue already.
+    for c in cams where listeners[c.oid] == nil {
+        let cam = c
+        let block = addRunningListener(cam.oid, workQueue) {
+            let v = cmioIsRunning(cam.oid)
+            if lastState[cam.id] != v { lastState[cam.id] = v; emitState(cam) }
+        }
+        listeners[c.oid] = block
+    }
+    // Prune state for departed device ids and emit current state for all present.
+    let presentIDs = Set(cams.map { $0.id })
+    lastState = lastState.filter { presentIDs.contains($0.key) }
     for c in cams {
         let v = cmioIsRunning(c.oid)
         lastState[c.id] = v
@@ -75,7 +84,7 @@ func rescan() {
 
 workQueue.async {
     rescan()
-    addDeviceListListener(workQueue) { workQueue.async { rescan() } }
+    addDeviceListListener(workQueue) { rescan() }
 }
 
 // Safety fallback: re-read every 5 s and emit only on change.
