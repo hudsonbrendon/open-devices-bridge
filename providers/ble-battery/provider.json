@@ -1,0 +1,8 @@
+{
+  "id": "ble-battery",
+  "name": "BLE Battery",
+  "exec": "ble-battery",
+  "args": [],
+  "platforms": ["darwin"],
+  "enabled": true
+}

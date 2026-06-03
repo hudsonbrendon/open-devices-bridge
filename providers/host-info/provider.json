@@ -1,0 +1,8 @@
+{
+  "id": "host-info",
+  "name": "Host Info",
+  "exec": "host_info.py",
+  "args": [],
+  "platforms": ["darwin", "linux", "windows"],
+  "enabled": true
+}

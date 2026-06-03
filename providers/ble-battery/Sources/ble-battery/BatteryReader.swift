@@ -2,7 +2,7 @@ import Foundation
 import CoreBluetooth
 
 /// Abstraction so the menu bar / publisher can be driven by a fake in tests.
-public protocol BatteryReading: AnyObject {
+protocol BatteryReading: AnyObject {
     /// Current Bluetooth authorization/power state.
     var state: CBManagerState { get }
     /// Called whenever `state` changes (e.g. permission granted, BT toggled).
@@ -15,15 +15,15 @@ public protocol BatteryReading: AnyObject {
 /// Reads battery (0x2A19) and firmware (0x2A26) from peripherals already
 /// connected to the system, by piggybacking on the system connection via
 /// `retrieveConnectedPeripherals`. No bonding, no extra pairing slot.
-public final class BatteryReader: NSObject, BatteryReading {
+final class BatteryReader: NSObject, BatteryReading {
     private static let batteryService = CBUUID(string: "180F")
     private static let deviceInfoService = CBUUID(string: "180A")
     private static let batteryLevel = CBUUID(string: "2A19")
     private static let firmwareRev = CBUUID(string: "2A26")
 
     private var central: CBCentralManager!
-    public private(set) var state: CBManagerState = .unknown
-    public var onStateChange: ((CBManagerState) -> Void)?
+    private(set) var state: CBManagerState = .unknown
+    var onStateChange: ((CBManagerState) -> Void)?
 
     // Per-refresh state.
     private var pending: Set<UUID> = []
@@ -37,12 +37,12 @@ public final class BatteryReader: NSObject, BatteryReading {
     // Keep strong refs to peripherals during a refresh (CB requires it).
     private var active: [UUID: CBPeripheral] = [:]
 
-    public override init() {
+    override init() {
         super.init()
         central = CBCentralManager(delegate: self, queue: .main)
     }
 
-    public func refresh(completion: @escaping ([DeviceReading]) -> Void) {
+    func refresh(completion: @escaping ([DeviceReading]) -> Void) {
         guard state == .poweredOn else {
             // Can't read now: report last known, all offline.
             completion(offlineSnapshot())
@@ -114,23 +114,23 @@ public final class BatteryReader: NSObject, BatteryReading {
 }
 
 extension BatteryReader: CBCentralManagerDelegate {
-    public func centralManagerDidUpdateState(_ central: CBCentralManager) {
+    func centralManagerDidUpdateState(_ central: CBCentralManager) {
         state = central.state
         onStateChange?(state)
     }
 
-    public func centralManager(_ central: CBCentralManager, didConnect p: CBPeripheral) {
+    func centralManager(_ central: CBCentralManager, didConnect p: CBPeripheral) {
         p.discoverServices([Self.batteryService, Self.deviceInfoService])
     }
 
-    public func centralManager(_ central: CBCentralManager,
+    func centralManager(_ central: CBCentralManager,
                                didFailToConnect p: CBPeripheral, error: Error?) {
         markDone(p.identifier)
     }
 }
 
 extension BatteryReader: CBPeripheralDelegate {
-    public func peripheral(_ p: CBPeripheral, didDiscoverServices error: Error?) {
+    func peripheral(_ p: CBPeripheral, didDiscoverServices error: Error?) {
         guard error == nil, let services = p.services, !services.isEmpty else {
             recordPartial(p); markDone(p.identifier); return
         }
@@ -139,7 +139,7 @@ extension BatteryReader: CBPeripheralDelegate {
         }
     }
 
-    public func peripheral(_ p: CBPeripheral,
+    func peripheral(_ p: CBPeripheral,
                            didDiscoverCharacteristicsFor s: CBService, error: Error?) {
         for ch in s.characteristics ?? [] where
             ch.uuid == Self.batteryLevel || ch.uuid == Self.firmwareRev {
@@ -147,7 +147,7 @@ extension BatteryReader: CBPeripheralDelegate {
         }
     }
 
-    public func peripheral(_ p: CBPeripheral,
+    func peripheral(_ p: CBPeripheral,
                            didUpdateValueFor ch: CBCharacteristic, error: Error?) {
         let id = p.identifier
         var current = collected[id] ?? DeviceReading(
