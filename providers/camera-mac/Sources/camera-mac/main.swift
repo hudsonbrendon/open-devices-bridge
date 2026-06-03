@@ -48,7 +48,59 @@ if CommandLine.arguments.contains("--selftest") {
     exit(0)
 }
 
-// (continuous run loop is added in Task 3)
-let cams = buildCams()
-emitDevices(cams)
-cams.forEach { emitState($0) }
+let workQueue = DispatchQueue(label: "camera-mac.work")
+var cams: [Cam] = []
+var listening = Set<CMIOObjectID>()
+var lastState: [String: Bool] = [:]
+
+func rescan() {
+    cams = buildCams()
+    emitDevices(cams)
+    for c in cams where !listening.contains(c.oid) {
+        listening.insert(c.oid)
+        let cam = c
+        addRunningListener(cam.oid, workQueue) {
+            workQueue.async {
+                let v = cmioIsRunning(cam.oid)
+                if lastState[cam.id] != v { lastState[cam.id] = v; emitState(cam) }
+            }
+        }
+    }
+    for c in cams {
+        let v = cmioIsRunning(c.oid)
+        lastState[c.id] = v
+        emitState(c)
+    }
+}
+
+workQueue.async {
+    rescan()
+    addDeviceListListener(workQueue) { workQueue.async { rescan() } }
+}
+
+// Safety fallback: re-read every 5 s and emit only on change.
+let timer = DispatchSource.makeTimerSource(queue: workQueue)
+timer.schedule(deadline: .now() + 5, repeating: 5)
+timer.setEventHandler {
+    for c in cams {
+        let v = cmioIsRunning(c.oid)
+        if lastState[c.id] != v { lastState[c.id] = v; emitState(c) }
+    }
+}
+timer.resume()
+
+// Host → provider commands on stdin.
+DispatchQueue.global().async {
+    while let line = readLine(strippingNewline: true) {
+        guard let data = line.data(using: .utf8),
+              let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let type = obj["type"] as? String else { continue }
+        switch type {
+        case "refresh": workQueue.async { cams.forEach { emitState($0) } }
+        case "shutdown": exit(0)
+        default: break
+        }
+    }
+}
+
+RunLoop.main.run()
