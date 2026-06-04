@@ -32,6 +32,9 @@ jobs:
       - name: Install JS deps
         run: npm ci || npm install
 
+      - name: Stage providers + build frontend (needed by tauri-build/generate_context)
+        run: bash scripts/build-providers.sh && npm run build
+
       - name: Rust tests
         run: cargo test --manifest-path src-tauri/Cargo.toml
 
