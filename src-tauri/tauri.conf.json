@@ -7,7 +7,7 @@
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420",
     "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build"
+    "beforeBuildCommand": "bash scripts/build-providers.sh && npm run build"
   },
   "app": { "windows": [], "security": { "csp": null } },
   "bundle": {
@@ -15,6 +15,6 @@
     "targets": ["app", "dmg"],
     "icon": ["icons/icon.png"],
     "macOS": { "minimumSystemVersion": "14.0" },
-    "resources": { "../providers/": "providers/" }
+    "resources": { "providers": "providers" }
   }
 }
