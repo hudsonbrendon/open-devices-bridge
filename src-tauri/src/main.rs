@@ -3,6 +3,7 @@
 mod config;
 mod hapublish;
 mod protocol;
+mod registry;
 
 fn main() {
     tauri::Builder::default()
