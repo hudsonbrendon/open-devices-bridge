@@ -2,6 +2,7 @@
 
 mod config;
 mod hapublish;
+mod mqtt;
 mod protocol;
 mod provider;
 mod registry;
