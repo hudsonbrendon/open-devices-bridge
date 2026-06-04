@@ -3,6 +3,7 @@
 mod config;
 mod hapublish;
 mod protocol;
+mod provider;
 mod registry;
 
 fn main() {
